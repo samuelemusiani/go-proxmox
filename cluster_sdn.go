@@ -32,7 +32,23 @@ func (cl *Cluster) NewSDNVNet(ctx context.Context, vnet *VNetOptions) error {
 }
 
 func (cl *Cluster) UpdateSDNVNet(ctx context.Context, vnet *VNet) error {
-	return cl.client.Put(ctx, fmt.Sprintf("/cluster/sdn/vnets/%s", vnet.Name), vnet, nil)
+
+	type vnetUpdate struct {
+		VNet
+		Delete []string `json:"delete,omitempty"`
+	}
+
+	var vnetUpd vnetUpdate
+
+	if vnet.VlanAware == 0 {
+		vnet.VlanAware = 0 // vlan is not updatable if not vlan aware
+		vnetUpd.Delete = []string{"vlanaware"}
+	}
+
+	vnetUpd.VNet = *vnet
+	vnetUpd.Name = "" // name is not updatable
+	vnetUpd.Type = "" // type is not updatable
+	return cl.client.Put(ctx, fmt.Sprintf("/cluster/sdn/vnets/%s", vnet.Name), vnetUpd, nil)
 }
 
 func (cl *Cluster) DeleteSDNVNet(ctx context.Context, name string) error {
